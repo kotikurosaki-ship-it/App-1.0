@@ -1,0 +1,47 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: System deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git zip unzip openjdk-17-jdk autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 \
+            cmake libffi-dev libssl-dev build-essential ccache aidl
+
+      - name: Install buildozer
+        run: pip install buildozer cython==0.29.36
+
+      - name: Write signing keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > jobbot.keystore
+          cat > ~/.buildozer_keystore <<EOF
+          ${{ secrets.KEYSTORE_ALIAS }}
+          ${{ secrets.KEYSTORE_PASSWORD }}
+          ${{ secrets.KEY_PASSWORD }}
+          EOF
+
+      - name: Build release
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+        run: buildozer -v android release
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobbot-release
+          path: bin/*.apk
