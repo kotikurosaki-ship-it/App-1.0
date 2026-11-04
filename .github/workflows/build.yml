@@ -9,7 +9,8 @@ on:
 
 jobs:
   build-android:
-    runs-on: ubuntu-22.04
+    # Use Ubuntu 22.04 to avoid libtinfo5 missing package errors
+    runs-on: ubuntu-22.04 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,20 +26,30 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             git zip unzip openjdk-17-jdk python3-pip autoconf libtool \
             pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev \
-            libtinfo6 cmake libffi-dev libssl-dev build-essential \
+            cmake libffi-dev libssl-dev build-essential ccache aidl \
+            libtinfo6
 
       - name: Install buildozer + cython
         run: |
           python -m pip install --upgrade pip
           pip install buildozer cython==0.29.36 virtualenv
 
+      # This step prevents the build from hanging and waiting for "Y/N"
+      - name: Pre-accept Android SDK licenses
+        run: |
+          mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
+          echo -e "\n8933bad161af4b6a5b573652ffc7aaf3aee85a47" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo -e "\nd56f5187479451eabf01fb78af6dfcb131b33910" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+
+      # The "v2" here forces GitHub to ignore your old, broken cache
       - name: Cache buildozer directories
         uses: actions/cache@v4
         with:
           path: |
             ~/.buildozer
             .buildozer
-          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          key: buildozer-v2-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
 
       - name: Build APK with buildozer
         run: |
@@ -52,3 +63,4 @@ jobs:
           name: jobbot-apk
           path: bin/*.apk
           if-no-files-found: warn
+
