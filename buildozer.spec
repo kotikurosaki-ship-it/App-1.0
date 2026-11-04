@@ -38,7 +38,6 @@ p4a.branch = master
 p4a.source_dir =
 p4a.local_recipes =
 
-# Android-safe: use app-private storage (handled in code)
 android.private_storage = True
 
 [buildozer]
